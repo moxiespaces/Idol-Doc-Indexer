@@ -1,0 +1,12 @@
+{
+    "port": 61613,
+    "host": "33.33.33.10",
+    "debug": true,
+    "login": "admin",
+    "passcode": "password",
+    "queue": "/queue/worq.autonomy",
+    "docs_dir": "/tmp/",
+    "graylogHost": "graylog01.moxie.ext",
+    "graylogToConsole": true,
+    "graylogPort": 12201
+}
