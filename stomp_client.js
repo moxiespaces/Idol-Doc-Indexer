@@ -2,8 +2,6 @@ var fs = require('fs');
 var stomp = require('stomp');
 var graylog = require('graylog');
 
-console.log("Starting stomp_client.js");
-
 // read preferences json file from disk
 var pref_file = fs.readFileSync(__dirname + '/stomp_preferences.json', 'utf8');
 var pref = JSON.parse(pref_file);
@@ -38,6 +36,8 @@ var stomp_args = {
     login: pref.login,
     passcode: pref.passcode
 };
+
+console.log("Starting stomp_client.js");
 
 var client = new stomp.Stomp(stomp_args);
 
