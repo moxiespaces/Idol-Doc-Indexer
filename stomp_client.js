@@ -11,16 +11,18 @@ GLOBAL.graylogFacility = pref.graylogFacility;
 GLOBAL.graylogPort = pref.graylogPort;
 GLOBAL.graylogToConsole = pref.graylogToConsole;
 
+var whatami = "nodejs";
+
 StompLogging.prototype.debug = function(message) {
-    log("debug: " + message, {level: LOG_DEBUG});
+    log("debug: " + message, {facility: whatami, level: LOG_DEBUG});
 };
 
 StompLogging.prototype.warn = function(message) {
-    log("warn: " + message, {level: LOG_WARNING});
+    log("warn: " + message, {facility: whatami, level: LOG_WARNING});
 };
 
 StompLogging.prototype.error = function(message, die) {
-    log("error: " + message, {level: LOG_ERROR});
+    log("error: " + message, {facility: whatami, level: LOG_ERROR});
     if (die)
         process.exit(1);
 };
@@ -37,7 +39,7 @@ var stomp_args = {
     passcode: pref.passcode
 };
 
-console.log("Starting stomp_client.js");
+log("Starting stomp_client.js");
 
 var client = new stomp.Stomp(stomp_args);
 
@@ -51,37 +53,55 @@ var headers = {
 
 client.on('connected', function() {
     client.subscribe(headers);
-    console.log("Connected");
+    log("Connected", {facility: whatami});
 });
 
 
 client.on('message', function(message) {
+    var startTime = new Date();
     var message_id = message.headers['message-id'];
-    var txn_id = message.headers['txn_id'] || '1';
+    var txn_id = message.headers['txn_id'] || startTime.getTime();
 
     // the body is json
     var body = message.body;
-    log("message_id: " + message_id + ", body: " + body, {"_txn_id": txn_id});
+    log("message_id: " + message_id + " body: " + body, {facility: whatami, level: LOG_DEBUG, "_transaction_id": txn_id});
 
     var json_data = JSON.parse(body);
 
     // the action will be either index or unindex
     var action = json_data.action;
 
+    function graylog(msg) {
+        GLOBAL.log(msg, {facility: whatami, level: LOG_DEBUG, "_transaction_id": txn_id});
+    }
+
     function ack() {
+        endTime = new Date();
+        elapsed = (endTime.getTime() - startTime.getTime()) / 1000;
+        graylog("ACK: " + message_id + " elapsed: " + elapsed + " seconds");
         client.ack(message.headers['message-id']);
     }
 
     function nack() {
+        endTime = new Date();
+        elapsed = (endTime.getTime() - startTime.getTime()) / 1000;
+        graylog("NACK: " + message_id + " elapsed: " + elapsed + " seconds");
+        client.ack(message.headers['message-id']);
         // not yet supported
     }
 
+    var ctx = {
+        log: graylog,
+        ack: ack,
+        nack: nack
+    };
+
     if ( json_data.action == "unindex" ) {
         // ***** UNINDEX ****** //
-        autonomy.unindex(json_data, ack, nack, txn_id);
+        autonomy.unindex(json_data, ctx);
     } else if ( json_data.action == "index" ) {
         // ****** INDEX ****** //
-        autonomy.index(json_data, ack, nack, txn_id);
+        autonomy.index(json_data, ctx);
     } else {
         // ****** unknown message. lets just delete it so we don't keep getting it ****** //
         ack();
@@ -89,11 +109,11 @@ client.on('message', function(message) {
 });
 
 client.on('error', function(error_frame) {
-    log(error_frame.body, {level: LOG_ERROR});
+    log(error_frame.body, {facility: whatami, level: LOG_ERROR});
 });
 
 process.on('SIGINT', function() {
-    log("SIGINT received: disconnecting...", {level: LOG_ERROR});
+    log("SIGINT received: disconnecting...", {facility: whatami, level: LOG_ERROR});
     client.disconnect();
 });
 

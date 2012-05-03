@@ -9,7 +9,7 @@ function Autonomy(docs_dir) {
 }
 
 
-Autonomy.prototype.index = function (json_data, ack, nack, txn_id) {
+Autonomy.prototype.index = function (json_data, ctx) {
     var key = json_data.s3_aws_key;
     var secret = json_data.s3_aws_secret;
     var bucket = json_data.s3_bucket;
@@ -27,14 +27,14 @@ Autonomy.prototype.index = function (json_data, ack, nack, txn_id) {
         bucket: bucket
     });
 
-    log("submitting the s3 request to download the document", {"_txn_id": txn_id});
+    ctx.log("submitting the s3 request to download the document");
     var s3_path = file_id + '/' + querystring.escape(file_name);
 
     // request the s3 document
     client.get(s3_path).on('response', function (s3_res) {
-        log("downloading " + s3_path + " from s3...", {"_txn_id": txn_id});
-        log(s3_res.statusCode, {"_txn_id": txn_id});
-        log(s3_res.headers, {"_txn_id": txn_id});
+        ctx.log("downloading " + s3_path + " from s3...");
+        ctx.log(s3_res.statusCode);
+        ctx.log(s3_res.headers);
 
         // create a directory with the same name as the db on the autonomy server
         var unique_name = (autonomy_db_name + "/" + file_id + "/" + file_name).replace(/\//g, "_")
@@ -48,10 +48,10 @@ Autonomy.prototype.index = function (json_data, ack, nack, txn_id) {
 
         // the file has been saved! now let's build the autonomy request
         s3_res.on('end', function () {
-            log("Submitting the data to autonomy filesystemfetch", {"_txn_id": txn_id});
+            ctx.log("Submitting the data to autonomy filesystemfetch");
             outstream.end();
             var xml = "<?xml version=\"1.0\"?><autn:import><autn:envelope><autn:stubidx><![CDATA[" + stubidx + "]]></autn:stubidx><autn:document><autn:fetch url=\"" + path_to_file + "\" deleteoriginal=\"true\" /></autn:document></autn:envelope></autn:import>";
-            log(xml, {"_txn_id": txn_id});
+            ctx.log(xml);
 
             var idol_data = querystring.stringify({
                 'Data': stubidx,
@@ -76,18 +76,18 @@ Autonomy.prototype.index = function (json_data, ack, nack, txn_id) {
             var post_req = http.request(http_options, function (res) {
                 res.setEncoding('utf8');
                 res.on('data', function (chunk) {
-                    console.log('Response: ' + chunk);
-                    ack();
+                    ctx.log('Response: ' + chunk);
+                    ctx.ack();
                 });
                 res.on('error', function (e) {
-                    console.log('problem with request: ' + e.message);
-                    nack();
+                    ctx.log('problem with request: ' + e.message);
+                    ctx.nack();
                 });
             });
 
             post_req.on('error', function(error) {
-                log('error trying to make autonomy request ' + error, {"_txn_id": txn_id});
-                nack();
+                ctx.log('error trying to make autonomy request ' + error);
+                ctx.nack();
             });
 
 
@@ -98,14 +98,14 @@ Autonomy.prototype.index = function (json_data, ack, nack, txn_id) {
     }).end();
 }
 
-Autonomy.prototype.unindex = function(json_data, ack, nack, txn_id) {
+Autonomy.prototype.unindex = function(json_data, ctx) {
 
     // unique autonomy id
     var reference = json_data.reference;
 
     // each customer has their own autonomy db
     var db = json_data.db;
-    log("unindex reference: " + reference + ", db: " + db, {"_txn_id": txn_id});
+    ctx.log("unindex reference: " + reference + ", db: " + db);
 
     var http_options = {
         host: 'localhost',
@@ -115,11 +115,11 @@ Autonomy.prototype.unindex = function(json_data, ack, nack, txn_id) {
 
     // post to autonomy to unindex the document
     var unindex_request = http.get(http_options, function (res) {
-        log("unindex response: " + res.statusCode, {"_txn_id": txn_id});
-        ack()
+        ctx.log("unindex response: " + res.statusCode);
+        ctx.ack()
     }).on('error', function (e) {
-        log("unindex error: " + e.message, {"_txn_id": txn_id});
-        nack();
+        ctx.log("unindex error: " + e.message);
+        ctx.nack();
     });
 }
 
