@@ -216,7 +216,16 @@ client.on('message', function(message) {
 });
 
 client.on('error', function(error_frame) {
-    var msg = "ERROR: " + (error_frame.body) ? error_frame.body : error_frame.toString;
+    var msg = "stomp_client error => ";
+    if (error_frame) {
+        if (error_frame.body) {
+            msg = msg + error_frame.body;
+        } else {
+            msg = msg + error_frame.toString();
+        }
+    } else {
+        msg = msg + " Unknown Error";
+    }
     log(msg, {facility: whatami, level: LOG_ERROR});
 });
 
