@@ -2,7 +2,7 @@ var fs = require('fs');
 var stomp = require('stomp');
 var graylog = require('graylog');
 var os = require('os');
-var dateFormat = require('dateFormat');
+var dateFormat = require('dateformat');
 
 // read preferences json file from disk
 var pref_file = fs.readFileSync(__dirname + '/stomp_preferences.json', 'utf8');
