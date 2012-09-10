@@ -33,11 +33,10 @@ Autonomy.prototype.index = function (json_data, ctx) {
     // request the s3 document
     client.get(s3_path).on('response', function (s3_res) {
         ctx.log("downloading " + s3_path + " from s3...");
-        ctx.log(s3_res.statusCode);
-        ctx.log(s3_res.headers);
+        ctx.log("download status code: " + s3_res.statusCode);
 
         // create a directory with the same name as the db on the autonomy server
-        var unique_name = (autonomy_db_name + "/" + file_id + "/" + file_name).replace(/\//g, "_")
+        var unique_name = (autonomy_db_name + "/" + file_id + "/" + file_name).replace(/\//g, "_");
         var path_to_file = docs_dir + unique_name;
 
         // stream the document to disk chunk by chunk
@@ -76,11 +75,11 @@ Autonomy.prototype.index = function (json_data, ctx) {
             var post_req = http.request(http_options, function (res) {
                 res.setEncoding('utf8');
                 res.on('data', function (chunk) {
-                    ctx.log('Response: ' + chunk);
+                    ctx.log('Autonomy Response: ' + chunk);
                     ctx.ack();
                 });
                 res.on('error', function (e) {
-                    ctx.log('problem with request: ' + e.message);
+                    ctx.log('Autonomy problem with request: ' + e.message);
                     ctx.nack();
                 });
             });
@@ -96,7 +95,7 @@ Autonomy.prototype.index = function (json_data, ctx) {
             post_req.end();
         });
     }).end();
-}
+};
 
 Autonomy.prototype.unindex = function(json_data, ctx) {
 
@@ -116,12 +115,12 @@ Autonomy.prototype.unindex = function(json_data, ctx) {
     // post to autonomy to unindex the document
     var unindex_request = http.get(http_options, function (res) {
         ctx.log("unindex response: " + res.statusCode);
-        ctx.ack()
+        ctx.ack();
     }).on('error', function (e) {
         ctx.log("unindex error: " + e.message);
         ctx.nack();
     });
-}
+};
 
 
 module.exports = Autonomy;
