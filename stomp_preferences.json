@@ -8,5 +8,10 @@
     "docs_dir": "/tmp/",
     "graylogHost": "graylog01.moxie.ext",
     "graylogToConsole": true,
-    "graylogPort": 12201
+    "graylogPort": 12201,
+    "graylogFacility": "nodejs",
+    "graylogEnabled": true,
+    "logfile": "idol.log",
+    "logfileMaxSize": 10485760,
+    "logfileMaxFiles": 5
 }

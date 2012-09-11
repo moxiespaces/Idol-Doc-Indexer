@@ -8,7 +8,16 @@ var knox = require('knox');
 var path = require('path');
 var querystring = require('querystring');
 
-var process_state = "RUNNING";
+var process_state = "STARTING";
+
+var consoleOnly = false;
+var vargs = process.argv.slice(2);
+
+for (var idx=0; idx<vargs.length; idx++) {
+    if (vargs[idx] === "--console") {
+        consoleOnly = true;
+    }
+}
 
 // read preferences json file from disk
 var pref_file = fs.readFileSync(__dirname + '/stomp_preferences.json', 'utf8');
@@ -21,22 +30,27 @@ var logger = new (winston.Logger)({
     transports: [ ]
 });
 
-logger.add(winston.transports.Console, {timestamp: true});
-logger.add(winston.transports.File, {
-    filename: 'stomp_client.log',
-    timestamp: true,
-    maxFiles: 5,
-    maxsize: 10485760 // 10 MB
-});
+if (consoleOnly) {
+    logger.add(winston.transports.Console, {timestamp: true});
+} else {
+    logger.add(winston.transports.File, {
+        filename: pref.logfile || 'idol.log',
+        timestamp: true,
+        maxFiles: pref.logfileMaxFiles || 5,
+        maxsize: pref.logfileMaxSize || 10485760 // 10 MB
+    });
+}
 
-var graylogOpts = {
-    graylogHost: pref.graylogHost,
-    graylogPort: pref.graylogPort,
-    graylogFacility: pref.graylogFacility
-};
+if (pref.graylogEnabled) {
+    var graylogOpts = {
+        graylogHost: pref.graylogHost,
+        graylogPort: pref.graylogPort,
+        graylogFacility: pref.graylogFacility
+    };
 
-var Graylog2 = require('winston-graylog2').Graylog2;
-logger.add(Graylog2, graylogOpts);
+    var Graylog2 = require('winston-graylog2').Graylog2;
+    logger.add(Graylog2, graylogOpts);
+}
 
 
 var stomp_args = {
@@ -450,17 +464,24 @@ process.on('SIGINT', function() {
             logger.info("Aborted " + s3_aborts + " s3, " + index_aborts + " index, and " + unindex_aborts + " unindex requests.");
         }
         waitForComplete();
+    } else if (process_state === "STARTING") {
     } else {
         logger.info("SIGINT received a second time: aborting...");
         client.disconnect();
+        setTimeout(terminate, 2000); // give it up to 2 seconds.
+
     }
 });
 
-client.on('disconnected', function(err) {
+function terminate() { process.exit(1); }
+
+client.on('disconnected', function() {
     var msg = "finished with " + messages.length + " messages outstanding.";
-    logger.info(msg, function() {
-        process.exit(1);
-    });
+    logger.info(msg, terminate);
+});
+
+client.on('connected', function() {
+    process_state = "RUNNING";
 });
 
 client.connect();
