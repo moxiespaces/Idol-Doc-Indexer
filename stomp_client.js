@@ -81,6 +81,14 @@ var headers = {
     "activemq.priority": 50
 };
 
+/**
+ * Utility function to add a single leading zero, if necessary.
+ *
+ * @param n number between 0 and 99
+ * @return {String}
+ */
+function pad2(n) { return n<10 ? '0'+n : '' + n; }
+
 // set default podName and then determine actual podName, based on queue being listened to.
 // this name will be used in job stats messages.
 var podName = "autonomy";
@@ -290,7 +298,15 @@ MessageContext.prototype.index = function () {
         ctx.log("download status code: " + s3_res.statusCode);
 
         // create a directory with the same name as the db on the autonomy server
-        var unique_name = (autonomy_db_name + "/" + file_id + "/" + file_name).replace(/\//g, "_");
+        // var unique_name = (autonomy_db_name + "/" + file_id + "/" + file_name).replace(/\//g, "_");
+        var now = new Date();
+
+        var unique_name = [
+            now.getFullYear(), pad2(now.getMonth()+1), pad2(now.getDate()),
+            '-', pad2(now.getHours()), pad2(now.getMinutes()), pad2(now.getSeconds()),
+            '-', process.pid,
+            '-', (Math.random() * 0x100000000 + 1).toString(36)
+        ].join('');
         ctx.path_to_file = docs_dir + unique_name;
 
         // stream the document to disk chunk by chunk
